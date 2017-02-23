@@ -27,6 +27,8 @@ def run(filename):
             endpoints[int(endpoint_id)]["videos"].append({"id": int(video_nbr),
                                                           "requests" : int(requests_len)})
         print(requests)
+        l = sorted(requests, key=lambda a: a["latency"])
+        print(l)
 
 
 if __name__ == "__main__":
