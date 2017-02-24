@@ -1,5 +1,11 @@
 import sys
 
+def dump_result(cache_servers):
+    print(len(cache_servers))
+    for i, server in enumerate(cache_servers):
+        row = str(i) + ' ' + ' '.join(map(str, server))
+        print(row)
+
 def main(video_sizes, cache_servers, endpoints):
     print("VIDEO_SIZES")
     print(video_sizes)
