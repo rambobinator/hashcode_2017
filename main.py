@@ -15,7 +15,7 @@ def basic_heuristic(requests, cache_servers):
     for request in requests:
         for connected_cache_server in request["connected_cache_servers"]:
             csid = connected_cache_server["id"]
-            if request["video_size"] + cache_servers_usage[csid] <= cache_servers[csid]:
+            if request["video_size"] + cache_servers_usage[csid] <= cache_servers[csid] and request["video_id"] not in used_cache_servers[csid]:
                 cache_servers_usage[csid] += request["video_size"]
                 used_cache_servers[csid].append(request["video_id"])
                 break
