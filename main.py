@@ -1,14 +1,19 @@
 import sys
+import object1
 
 def run(filename):
     with open(filename) as _file:
         video_len, endpoint_len, request_len, cache_len, cache_size = next(_file).split()
         video_sizes = [int(size) for size in next(_file).split()]
-        cache_servers = [int(cache_size) for _ in range(0, int(cache_len))]
+        cache_servers_len = int(cache_size)
+        cache_servers = []
         requests = []
         endpoints = []
         for endpoint_id in range(0, int(endpoint_len)):
             latency, cache_server_len = next(_file).split()
+
+            e = Endpoint(endpoint_id)
+
             endpoints.append({"id": endpoint_id,
                               "dc_latency": int(latency),
                               "videos": [],
@@ -17,6 +22,9 @@ def run(filename):
                 cache_server_id, cache_server_latency = next(_file).split()
                 endpoints[endpoint_id]["servers_cache"].append({"id": int(cache_server_id),
                                                                 "latency": int(cache_server_latency)})
+
+                e.addCaches(int(cache_server_id), int(cache_server_latency))
+
             endpoints[endpoint_id]["servers_cache"].sort(key=lambda k: k.get("id"))
 
         for line in _file:
@@ -26,10 +34,10 @@ def run(filename):
                     "latency": int(int(requests_len) * endpoints[int(endpoint_id)]["dc_latency"])})
             endpoints[int(endpoint_id)]["videos"].append({"id": int(video_nbr),
                                                           "requests" : int(requests_len)})
-        print(requests)
-        l = sorted(requests, key=lambda a: a["latency"])
-        print(l)
-
+        requests = sorted(requests, key=lambda a: a["latency"])
+        # for r in requests:
+        #     endpoint_id, video_id, l = r
+        #     cache = endpoints[endpoint_id]["servers_cache"]
 
 if __name__ == "__main__":
     if len(sys.argv) == 2:
