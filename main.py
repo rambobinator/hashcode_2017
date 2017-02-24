@@ -70,7 +70,7 @@ def run(filename):
                              "connected_cache_servers": endpoints[endpoint_id]["servers_cache"],
                              "total_latency": requests_nbr * endpoints[endpoint_id]["dc_latency"],
                              "dc_latency": endpoints[endpoint_id]["dc_latency"]})
-        requests.sort(key=lambda k: k.get("total_latency"))
+        requests.sort(key=lambda k: k.get("total_latency"), reverse=True)
         main(video_sizes, cache_servers, endpoints, requests)
 
 if __name__ == "__main__":
