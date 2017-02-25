@@ -28,13 +28,15 @@ class Cache:
     def addVideo(self, video):
         self.videos[video.id] = video
         self.freeSpace -= video.size
+        for e in self.endpoints.values():
+            e.addVidLat(video, self.id)
 
     def increaseLatency(self, video):
         requests = [r for r in self.requests if r.video.id == video]
         ret = 0
         for r in requests:
-            delta = r.endpoint.dcLatency - self.latencies[r.endpoint.id]
-            if (delta != 0):
+            delta = r.endpoint.getLat(video) - self.latencies[r.endpoint.id]
+            if (delta > 0):
                 ret += (r.nb * delta)
         return(ret)
 
@@ -51,18 +53,17 @@ class Endpoint:
     def get(endpoint):
         return Endpoint.endpoints[endpoint]
 
-    @staticmethod
-    def sort():
-        for e in Endpoint.endpoints.values():
-            e.latencies.sort(key=lambda k: k.get("latency"))
+    # @staticmethod
+    # def sort():
+    #     for e in Endpoint.endpoints.values():
+    #         e.latencies.sort(key=lambda k: k.get("latency"))
 
     def __init__(self, id, lat):
         self.id = id
-        self.caches = {}
-        self.latencies = []
-        self.latenciesDict = {}
+        self.caches = []
         self.dcLatency = lat
-        # self.requests = []
+        self.latencies = {}
+        self.vidLat = {}
         Endpoint.endpoints[id] = self
 
     def addCaches(self, cache, lat):
@@ -70,14 +71,22 @@ class Endpoint:
             c = Cache(cache)
         else:
             c = Cache.caches[cache]
-        self.caches[cache] = c
         c.latencies[self.id] = lat
         if self.id not in c.endpoints:
             c.endpoints[self.id] = self
-        self.latencies.append({"id": cache,
+        self.caches.append({"id": cache,
                                "cache": c,
                                "latency": lat})
-        self.latenciesDict[cache] = lat
+        self.latencies[cache] = lat
+
+    def addVidLat(self, video, cache):
+        self.vidLat[video.id] = self.latencies[cache]
+
+    def getLat(self, video):
+        if video not in self.vidLat:
+            return(self.dcLatency)
+        return(self.vidLat[video])
+
 
 class Request:
     requests = []
@@ -93,28 +102,27 @@ class Request:
         self.nb = nb
         self.latency = e.dcLatency * nb
         Request.requests.append(self)
-        for c in e.caches.values():
-            c.requests.append(self)
+        for c in e.caches:
+            c["cache"].requests.append(self)
         # e.requests.append(self)
 
-    def latency(self):
-        lat = Endpoint.get(self.endpoint).dcLatency
-        for c in self.endpoint.caches:
-            if self.video in c.videos and self.endpoint.latencies[c.id] < lat:
-                lat = self.endpoint.latencies[c.id]
-        self.latency = lat
-        return lat
+    # def latency(self):
+    #     lat = Endpoint.get(self.endpoint).dcLatency
+    #     for c in self.endpoint.caches:
+    #         if self.video in c.videos and self.endpoint.latencies[c.id] < lat:
+    #             lat = self.endpoint.latencies[c.id]
+    #     self.latency = lat
+    #     return lat
                 
 
 def algo():
     for r in Request.requests:
         possibilities = []
-        for l in r.endpoint.latencies:
+        for l in r.endpoint.caches:
             c = l["cache"]
-            id = l["id"]
-            if r.video.size < c.freeSpace:
+            if r.video.id not in c.videos and r.video.size < c.freeSpace:
                 gain = c.increaseLatency(r.video.id)
-                if (gain != 0):
+                if (gain > 0):
                     possibilities.append({"cache": c,
                                           "gain": gain})
         if (possibilities):
@@ -146,37 +154,37 @@ def run(filename):
         requests = []
         for endpoint_id in range(0, endpoint_len):
             latency, cache_server_len = map(int, next(_file).split())
-            endpoints.append({"id": endpoint_id,
-                              "dc_latency": latency,
-                              "videos": [],
-                              "servers_cache": []})
+            # endpoints.append({"id": endpoint_id,
+            #                   "dc_latency": latency,
+            #                   "videos": [],
+            #                   "servers_cache": []})
 
             e = Endpoint(endpoint_id, latency)
 
             for _ in range(0, cache_server_len):
                 cache_server_id, cache_server_latency = map(int, next(_file).split())
-                endpoints[endpoint_id]["servers_cache"].append({"id": cache_server_id,
-                                                                "latency": cache_server_latency})
+                # endpoints[endpoint_id]["servers_cache"].append({"id": cache_server_id,
+                #                                                 "latency": cache_server_latency})
 
                 e.addCaches(cache_server_id, cache_server_latency)
 
-            endpoints[endpoint_id]["servers_cache"].sort(key=lambda k: k.get("latency"))
+            # endpoints[endpoint_id]["servers_cache"].sort(key=lambda k: k.get("latency"))
 
         for line in _file:
             video_id, endpoint_id, requests_nbr = map(int, line.split())
-            endpoints[endpoint_id]["videos"].append({"id": video_id,
-                                                     "requests": requests_nbr})
-            requests.append({"endpoint_id" : endpoint_id,
-                             "video_id": video_id,
-                             "video_size": video_sizes[video_id],
-                             "connected_cache_servers": endpoints[endpoint_id]["servers_cache"],
-                             "total_latency": requests_nbr * endpoints[endpoint_id]["dc_latency"],
-                             "dc_latency": endpoints[endpoint_id]["dc_latency"]})
+            # endpoints[endpoint_id]["videos"].append({"id": video_id,
+            #                                          "requests": requests_nbr})
+            # requests.append({"endpoint_id" : endpoint_id,
+            #                  "video_id": video_id,
+            #                  "video_size": video_sizes[video_id],
+            #                  "connected_cache_servers": endpoints[endpoint_id]["servers_cache"],
+            #                  "total_latency": requests_nbr * endpoints[endpoint_id]["dc_latency"],
+            #                  "dc_latency": endpoints[endpoint_id]["dc_latency"]})
 
             Request(video_id, endpoint_id, requests_nbr)
 
         Request.sort()
-        Endpoint.sort()
+        # Endpoint.sort()
         algo()
         out()
 
